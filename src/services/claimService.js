@@ -6,7 +6,7 @@ const {
   createCustomer,
   addCampaignTag
 } = require('./customerWriteService');
-1
+
 const {
   applyMarketingConsent
 } = require('./consentService');
