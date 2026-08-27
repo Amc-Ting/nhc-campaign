@@ -72,27 +72,33 @@ async function createCustomer({
     input.phone = normalizedPhone;
   }
 
-  let data = await shopifyGraphQL(mutation, { input });
-  let result = data.customerCreate;
-
-  // If Shopify rejects the phone, retry without it
-  if (
-    result.userErrors?.length &&
-    result.userErrors.some(e =>
-      e.field?.includes('phone')
-    )
-  ) {
-    delete input.phone;
-
-    data = await shopifyGraphQL(mutation, { input });
-    result = data.customerCreate;
-  }
+  const data = await shopifyGraphQL(mutation, { input });
+  const result = data.customerCreate;
 
   if (result.userErrors?.length) {
     console.error(
       'Shopify customerCreate errors:',
       JSON.stringify(result.userErrors, null, 2)
     );
+
+    const isDuplicatePhone =
+      result.userErrors.some(e =>
+        e.field?.includes('phone') &&
+        /already|taken|exists/i.test(e.message)
+      );
+
+    // If the phone already belongs to another customer,
+    // signal the caller to handle it via the existing customer.
+    if (isDuplicatePhone) {
+      const error = new Error(
+        result.userErrors.map(item => item.message).join('; ')
+      );
+
+      error.code = 'PHONE_TAKEN';
+      error.userErrors = result.userErrors;
+
+      throw error;
+    }
 
     const error = new Error(
       result.userErrors.map(item => item.message).join('; ')
@@ -154,5 +160,6 @@ async function addCampaignTag(customerId) {
 
 module.exports = {
   createCustomer,
-  addCampaignTag
+  addCampaignTag,
+  normalizePhone
 };
