@@ -36,15 +36,6 @@ router.post('/claim', async (req, res) => {
       error
     );
 
-    if (error.code === 'INVALID_PHONE') {
-      return res.status(400).json({
-        success: false,
-        code: 'INVALID_PHONE',
-        message:
-          'Please enter a valid mobile number.'
-      });
-    }
-
     if (error.code === 'CUSTOMER_CREATE_FAILED') {
       return res.status(409).json({
         success: false,
