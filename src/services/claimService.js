@@ -14,6 +14,9 @@ const {
 const DISCOUNT_CODE =
   process.env.DISCOUNT_CODE || 'CARNIVAL50';
 
+const CAMPAIGN_TAG =
+  process.env.CAMPAIGN_TAG || 'CARNIVAL50_CLAIMED';
+
 async function processClaim({
   firstName,
   lastName,
@@ -21,26 +24,11 @@ async function processClaim({
   phone,
   marketingConsent
 }) {
-  // First eligibility check.
   const eligibility =
-    await checkCampaignEligibility({
-      email,
-      phone
-    });
-
-  if (!eligibility.eligible) {
-    return {
-      success: false,
-      code: eligibility.code,
-      message: eligibility.message
-    };
-  }
+    await checkCampaignEligibility({ email });
 
   let customer = eligibility.customer;
 
-  // New customer only.
-  // Existing customers are NEVER updated with submitted
-  // name/email/phone values.
   if (!customer) {
     customer = await createCustomer({
       firstName,
@@ -48,53 +36,36 @@ async function processClaim({
       email,
       phone
     });
-  }
+  } else if (eligibility.code === 'ALREADY_CLAIMED') {
+    // Customer already has the tag — return success
+    // without re-adding the tag.
+    await applyMarketingConsent({
+      customerId: customer.id,
+      consent: marketingConsent,
+      currentMarketingState: customer.emailMarketingConsent?.marketingState
+    });
 
-  // Second eligibility check immediately before adding the
-  // campaign tag. This helps protect against a second
-  // submission that arrives while the first claim is processing.
-  //
-  // For a newly created customer, the customer already has
-  // the campaign tag from customerCreate, so we don't need
-  // to perform this second lookup/tag operation.
-  if (eligibility.customer) {
-    const finalEligibility =
-      await checkCampaignEligibility({
-        email,
-        phone
-      });
+    return {
+      success: true,
+      code: 'CLAIM_SUCCESS',
+      message: 'Claim successful.',
+      discount_code: DISCOUNT_CODE
+    };
+  } else {
+    const currentTags = Array.isArray(customer.tags)
+      ? customer.tags
+      : [];
 
-    if (!finalEligibility.eligible) {
-      return {
-        success: false,
-        code: finalEligibility.code,
-        message: finalEligibility.message
-      };
+    if (!currentTags.includes(CAMPAIGN_TAG)) {
+      await addCampaignTag(customer.id);
     }
-
-    customer = finalEligibility.customer;
   }
 
-  // Marketing consent:
-  // checked -> subscribe
-  // unchecked -> no change
   await applyMarketingConsent({
     customerId: customer.id,
     consent: marketingConsent,
-    email
+    currentMarketingState: customer.emailMarketingConsent?.marketingState
   });
-
-  const campaignTag =
-    process.env.CAMPAIGN_TAG ||
-    'CARNIVAL50_CLAIMED';
-
-  const currentTags = Array.isArray(customer.tags)
-    ? customer.tags
-    : [];
-
-  if (!currentTags.includes(campaignTag)) {
-    await addCampaignTag(customer.id);
-  }
 
   return {
     success: true,

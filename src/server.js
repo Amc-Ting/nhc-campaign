@@ -2,6 +2,8 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
+
 
 const {
   shopifyGraphQL
@@ -14,7 +16,8 @@ const {
 
 const campaignRouter =
   require('./routes/campaign');
-
+const shopifyAuthRouter =
+  require('./routes/shopifyAuth');
 const app = express();
 
 const PORT =
@@ -28,6 +31,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use(cookieParser());
 app.use(
   express.urlencoded({
     extended: true
@@ -125,11 +129,21 @@ app.get('/customer/test', async (req, res) => {
   }
 });
 
+// Shopify OAuth
+app.use(
+  '/auth',
+  shopifyAuthRouter
+);
+
+
+// Campaign API
 app.use(
   '/api/campaign',
   campaignRouter
 );
 
+
+// 404
 app.use((req, res) => {
   res.status(404).json({
     success: false,

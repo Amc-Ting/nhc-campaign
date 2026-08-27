@@ -6,15 +6,16 @@ const {
  * Subscribe customer to email marketing when the
  * campaign checkbox is checked.
  *
- * If consent is false, we deliberately do nothing.
- * This means an unchecked checkbox will NOT unsubscribe
- * an existing subscriber.
+ * - consent = true  AND not already subscribed → SUBSCRIBED
+ * - consent = true  AND already subscribed    → NO_CHANGE
+ * - consent = false → NO_CHANGE (never unsubscribe)
  */
 async function applyMarketingConsent({
   customerId,
-  consent
+  consent,
+  currentMarketingState
 }) {
-  if (!consent) {
+  if (!consent || currentMarketingState === 'SUBSCRIBED') {
     return {
       changed: false,
       action: 'NO_CHANGE'
