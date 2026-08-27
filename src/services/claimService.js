@@ -3,6 +3,7 @@ const {
 } = require('./customerEligibilityService');
 
 const {
+  findCustomerByEmail,
   findCustomerByPhone
 } = require('./customerService');
 
@@ -34,31 +35,30 @@ async function processClaim({
 
   let customer = eligibility.customer;
 
+  // No customer found for this email yet
   if (!customer) {
-    try {
+    // Check if the phone already belongs to another customer
+    if (phone) {
+      const byPhone = await findCustomerByPhone(
+        normalizePhone(phone) || phone
+      );
+
+      if (byPhone && byPhone.length > 0) {
+        // Phone exists → tag that customer, don't create new
+        customer = byPhone[0];
+        await addCampaignTag(customer.id);
+      }
+    }
+
+    // Only create a brand-new customer when both
+    // email and phone are new
+    if (!customer) {
       customer = await createCustomer({
         firstName,
         lastName,
         email,
         phone
       });
-    } catch (error) {
-      // Phone already belongs to another customer.
-      // Find that customer and add the campaign tag instead.
-      if (error.code === 'PHONE_TAKEN' && phone) {
-        const existing = await findCustomerByPhone(
-          normalizePhone(phone) || phone
-        );
-
-        if (existing && existing.length > 0) {
-          customer = existing[0];
-          await addCampaignTag(customer.id);
-        } else {
-          throw error;
-        }
-      } else {
-        throw error;
-      }
     }
   } else if (eligibility.code === 'ALREADY_CLAIMED') {
     // Customer already has the tag — return success
