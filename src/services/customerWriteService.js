@@ -72,8 +72,19 @@ async function createCustomer({
     input.phone = normalizedPhone;
   }
 
-  const data = await shopifyGraphQL(mutation, { input });
-  const result = data.customerCreate;
+  let data = await shopifyGraphQL(mutation, { input });
+  let result = data.customerCreate;
+
+  // If Shopify rejects the phone, retry without it
+  if (
+    result.userErrors?.length &&
+    result.userErrors.some(e => e.field?.includes('phone'))
+  ) {
+    delete input.phone;
+
+    data = await shopifyGraphQL(mutation, { input });
+    result = data.customerCreate;
+  }
 
   if (result.userErrors?.length) {
     console.error(
