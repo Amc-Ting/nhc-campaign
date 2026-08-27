@@ -82,6 +82,11 @@ async function createCustomer({
   const result = data.customerCreate;
 
   if (result.userErrors?.length) {
+    console.error(
+      'Shopify customerCreate errors:',
+      JSON.stringify(result.userErrors, null, 2)
+    );
+
     const error = new Error(
       result.userErrors.map(item => item.message).join('; ')
     );
