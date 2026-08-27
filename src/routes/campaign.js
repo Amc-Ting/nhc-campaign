@@ -50,7 +50,8 @@ router.post('/claim', async (req, res) => {
         success: false,
         code: error.code,
         message:
-          'We could not create your customer record. Please check your details and try again.'
+          'We could not create your customer record. Please check your details and try again.',
+        shopifyErrors: error.userErrors
       });
     }
 
