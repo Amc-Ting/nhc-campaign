@@ -28,6 +28,12 @@ function normalizePhone(phone) {
     return `+44${value.slice(1)}`;
   }
 
+  // UK mobile without leading zero
+  // Example: 7748305189
+  if (/^7\d{9}$/.test(value)) {
+    return `+44${value}`;
+  }
+
   return null;
 }
 async function createCustomer({
