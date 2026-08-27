@@ -42,7 +42,7 @@ async function processClaim({
     await applyMarketingConsent({
       customerId: customer.id,
       consent: marketingConsent,
-      email
+      currentMarketingState: customer.emailMarketingConsent?.marketingState
     });
 
     return {
@@ -64,7 +64,7 @@ async function processClaim({
   await applyMarketingConsent({
     customerId: customer.id,
     consent: marketingConsent,
-    email
+    currentMarketingState: customer.emailMarketingConsent?.marketingState
   });
 
   return {
